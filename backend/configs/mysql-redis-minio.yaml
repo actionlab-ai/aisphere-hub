@@ -1,0 +1,234 @@
+server:
+  addr: ":8848"
+  author: "admin"
+
+# database.provider:
+#   local: 本地 JSON 文件，适合开发 / demo
+#   mysql: 生产推荐，启动时可自动执行 migrations
+# Skill registry is namespace-free. Access Spaces below are IAM/RBAC domains only, not skill grouping dimensions.
+database:
+  provider: "mysql"
+  # DSN 里带库名即可；migration.autoCreate 会先连到 MySQL server 自动 CREATE DATABASE。
+  dsn: "${SKILLHUB_MYSQL_DSN}"
+  autoCreate: true
+  charset: "utf8mb4"
+  collation: "utf8mb4_unicode_ci"
+  local:
+    root: "./data/aihub"
+
+# 启动时自动建库、建表、记录 migration，不需要用户手工导入 SQL。
+migration:
+  enabled: true
+  dir: "./migrations"
+
+# cache.provider:
+#   memory: 单进程开发
+#   redis: 生产推荐，支持 single / cluster
+#   noop: 禁用缓存
+cache:
+  provider: "redis"
+  redis:
+    mode: "single" # single / cluster
+    addrs: ["127.0.0.1:6379"]
+    username: ""
+    password: ""
+    db: 0
+    prefix: "aihub"
+
+# Redis Cluster 示例：
+# cache:
+#   provider: "redis"
+#   redis:
+#     mode: "cluster"
+#     addrs:
+#       - "10.0.0.1:6379"
+#       - "10.0.0.2:6379"
+#       - "10.0.0.3:6379"
+#     prefix: "aihub"
+
+# objectStore.provider:
+#   local: 本地文件，适合开发
+#   minio/s3: 生产推荐
+#   none: 不启用对象存储，运行时会从 DB 里的 skill JSON fallback 重新打包
+objectStore:
+  provider: "minio"
+  prefix: ""
+  local:
+    root: "./data/objects"
+  s3:
+    endpoint: "127.0.0.1:9000"
+    region: "us-east-1"
+    accessKey: "minioadmin"
+    secretKey: "minioadmin"
+    bucket: "aihub"
+    useSSL: false
+    forcePathStyle: true
+    prefix: ""
+
+runtime:
+  routeCacheTTLSeconds: 300
+  versionCacheTTLSeconds: 600
+  groupCacheTTLSeconds: 60
+
+review:
+  enabled: false
+
+# Resource-level write/read coordination. This is not a global Redis lock.
+lock:
+  enabled: true
+  provider: "redis" # redis / memory / noop
+  ttlSeconds: 30
+  waitSeconds: 2
+  useRedisConfig: true
+
+# Auth is designed to integrate external identity systems. AIHub is the Resource Server:
+# it validates external OIDC/JWT/introspection/API-key identities, maps them to internal subjects,
+# then applies AIHub resource permissions on access-space/group/skill/proposal.
+auth:
+  enabled: true
+  mode: "mixed" # local / external / mixed
+  allowAnonymous: false
+  allowPublicRead: true
+
+  # Built-in local account mode. Keep this enabled when no external IdP is available.
+  local:
+    enabled: true
+    issuer: "aihub-local"
+    signingSecret: "${SKILLHUB_LOCAL_AUTH_SIGNING_SECRET}"
+    accessTokenTTLSeconds: 3600
+    refreshTokenTTLSeconds: 604800
+    accountFile: "./data/iam/local_accounts.json"
+    autoCreateBootstrap: false
+    setupEnabled: true
+    setupToken: "${SKILLHUB_SETUP_TOKEN}"
+    users:
+      - username: "admin"
+        password: "${SKILLHUB_BOOTSTRAP_ADMIN_PASSWORD}"
+        subjectId: "user:admin"
+        subjectType: "human"
+        organization: "default"
+        roles: ["admin"]
+        permissions: ["*"]
+        namespaces: ["*"]
+
+  # New provider-style auth. You can enable several providers at once.
+  providers:
+    # 1) Existing Admin/SSO system that signs JWT and exposes JWKS.
+    - name: "main-admin"
+      type: "jwt"
+      issuer: "go-admin"
+      audience: "aihub"
+      jwksUrl: "http://admin.example.com/.well-known/jwks.json"
+      claimMapping:
+        subject: "sub"
+        subjectType: "typ"
+        username: "preferred_username"
+        email: "email"
+        groups: "groups"
+        roles: "roles"
+        organization: "org"
+
+    # 2) Enterprise OIDC provider, such as Keycloak/Casdoor/Authentik/Dex.
+    # jwksUrl may be omitted; AIHub will discover it from issuer + /.well-known/openid-configuration.
+    - name: "company-oidc"
+      type: "oidc"
+      issuer: "https://idp.example.com/realms/aihub"
+      audience: "aihub-api"
+      clientId: "aihub-admin"
+      clientSecret: "${SKILLHUB_OIDC_CLIENT_SECRET}"
+      redirectUrl: "https://aihub.example.com/oauth/callback"
+      scopes: ["openid", "profile", "email", "groups"]
+      claimMapping:
+        subject: "sub"
+        username: "preferred_username"
+        email: "email"
+        groups: "groups"
+        roles: "roles"
+        organization: "org"
+
+    # 3) Agent platform JWT. Agents become first-class subjects.
+    - name: "agent-platform"
+      type: "jwt"
+      issuer: "agentkit"
+      audience: "aihub"
+      jwksUrl: "http://agentkit.example.com/.well-known/jwks.json"
+      claimMapping:
+        subject: "sub"
+        subjectType: "typ"
+        roles: "roles"
+        organization: "project_id"
+
+    # 4) Bootstrap API key provider for scripts/offline/dev. Prefer JWT/OIDC in production.
+    - name: "bootstrap"
+      type: "api_key"
+      header: "X-API-Key"
+      keys:
+        - name: "admin"
+          subjectId: "user:admin"
+          subjectType: "human"
+          organization: "default"
+          token: "CHANGE_ME_ADMIN_TOKEN"
+          roles: ["admin"]
+          permissions: ["*"]
+          namespaces: ["*"]
+        - name: "dialogue-skill-agent"
+          subjectId: "agent:dialogue_skill_batch_worker"
+          subjectType: "agent"
+          organization: "default"
+          token: "CHANGE_ME_AGENT_TOKEN"
+          roles: ["agent"]
+          permissions:
+            - "skill:read"
+            - "skill:proposal:create"
+            - "skill:proposal:read"
+            - "skill:overlay:read"
+          namespaces: ["public", "dev"]
+
+  # Map external groups/roles to internal AIHub roles and permissions.
+  roleMappings:
+    - provider: "main-admin"
+      externalGroup: "ai-platform-admin"
+      internalRoles: ["aihub-admin"]
+      permissions: ["*"]
+      namespaces: ["*"]
+    - provider: "company-oidc"
+      externalGroup: "novel-team"
+      internalRoles: ["skill-developer"]
+      permissions:
+        - "skill:read"
+        - "skill:admin:read"
+        - "skill:proposal:review"
+        - "skill:group:read"
+      namespaces: ["dev", "public"]
+    - provider: "agent-platform"
+      externalRole: "agent"
+      subjectType: "agent"
+      internalRoles: ["skill-agent"]
+      permissions:
+        - "skill:read"
+        - "skill:proposal:create"
+        - "skill:proposal:read"
+        - "skill:overlay:read"
+      namespaces: ["dev", "public"]
+
+  # Legacy bootstrap apiKeys remain supported, but providers[].type=api_key is preferred.
+  apiKeys: []
+
+
+# Standalone AIHub Console. Build front and serve dist under /ui.
+web:
+  enabled: true
+  dir: "../front/out"
+  routePrefix: "/ui"
+  indexFallback: true
+
+ops:
+  metricsEnabled: true
+  rateLimit:
+    enabled: true
+    writeLimitPerMinute: 300
+  idempotency:
+    enabled: true
+    ttlSeconds: 3600
+  audit:
+    enabled: true

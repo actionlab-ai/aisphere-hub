@@ -1,0 +1,187 @@
+# AIHub + aisphere-auth integration example
+#
+# This config extends the existing casdoor-casbin.yaml with the new
+# aisphereAuth block. Nothing in the existing auth / authz / ops sections
+# has been removed — the aisphere-auth integration is purely additive.
+#
+# To enable the integration:
+#   1. Set aisphereAuth.enabled: true
+#   2. Set aisphereAuth.endpoint to your aisphere-auth service URL
+#   3. Set aisphereAuth.serviceToken to the AISPHERE_SERVICE_TOKEN
+#      configured on the aisphere-auth side
+#   4. Optionally set authz.provider: "aisphere-auth" to delegate
+#      authorization decisions to aisphere-auth instead of casdoor-remote
+#   5. On the frontend, set NEXT_PUBLIC_AISPHERE_AUTH_ENABLED=true so the
+#      login page shows the "Sign in with AI Sphere" button and the API
+#      client auto-redirects to aisphere-auth on 401
+
+server:
+  addr: ":8848"
+  author: "aihub"
+
+database:
+  provider: "postgres"
+  dsn: "${AIHUB_POSTGRES_DSN}"
+  autoCreate: true
+  local:
+    root: "./data/aihub"
+
+migration:
+  enabled: true
+  dir: "./migrations"
+
+cache:
+  provider: "redis"
+  redis:
+    mode: "single"
+    addrs: ["127.0.0.1:6379"]
+    username: ""
+    password: ""
+    db: 0
+    prefix: "aihub"
+
+objectStore:
+  provider: "minio"
+  prefix: ""
+  local:
+    root: "./data/objects"
+  s3:
+    endpoint: "127.0.0.1:9000"
+    region: "us-east-1"
+    accessKey: "minioadmin"
+    secretKey: "minioadmin"
+    bucket: "aihub"
+    useSSL: false
+    forcePathStyle: true
+    prefix: ""
+
+runtime:
+  routeCacheTTLSeconds: 300
+  versionCacheTTLSeconds: 600
+  groupCacheTTLSeconds: 60
+
+review:
+  enabled: false
+
+lock:
+  enabled: true
+  provider: "redis"
+  ttlSeconds: 30
+  waitSeconds: 2
+  useRedisConfig: true
+
+# Authentication: keep the existing Casdoor OIDC provider as a fallback.
+# When aisphereAuth.enabled=true, an extra aisphereauth provider is
+# PREPENDED to the auth chain. If the aisphere_session cookie is present
+# and valid, introspect wins; otherwise the composite authenticator
+# falls through to local / oidc / etc.
+auth:
+  enabled: true
+  mode: "external" # external keeps local disabled; switch to "mixed" to keep local as a real fallback
+  allowAnonymous: false
+  allowPublicRead: true
+  local:
+    enabled: false
+
+  providers:
+    - name: "casdoor"
+      type: "oidc"
+      issuer: "${CASDOOR_ENDPOINT}"
+      audience: "aihub"
+      clientId: "aihub"
+      clientSecret: "${SKILLHUB_CASDOOR_CLIENT_SECRET}"
+      redirectUrl: "http://127.0.0.1:8848/v3/auth/oidc/callback"
+      scopes: ["openid", "profile", "email"]
+      claimMapping:
+        subject: "sub"
+        username: "preferred_username"
+        email: "email"
+        organization: "organization"
+        roles: "roles"
+        groups: "groups"
+
+  roleMappings:
+    - provider: "casdoor"
+      externalRole: "admin"
+      internalRoles: ["admin"]
+      permissions: ["*"]
+    - provider: "casdoor"
+      externalRole: "developer"
+      internalRoles: ["developer"]
+    - provider: "casdoor"
+      externalRole: "reviewer"
+      internalRoles: ["reviewer"]
+
+# Authorization: choose one of "static", "casbin", "casdoor-remote",
+# "aisphere-auth". The new "aisphere-auth" value delegates the decision
+# to the platform aisphere-auth service via /authz/check.
+#
+# Switching back is a single-line change — no other code paths are
+# affected.
+authz:
+  provider: "aisphere-auth"
+  casdoor:
+    endpoint: "${CASDOOR_ENDPOINT}"
+    owner: "built-in"
+    application: "aihub"
+    permission: "aihub_permission"
+    permissionId: ""
+    clientId: "${SKILLHUB_CASDOOR_CLIENT_ID}"
+    clientSecret: "${SKILLHUB_CASDOOR_CLIENT_SECRET}"
+    subjectFormat: "casdoor"
+    cacheTTLSeconds: 30
+    failClosed: true
+
+# aisphere-auth integration block.
+aisphereAuth:
+  enabled: true
+  # aisphere-auth service URL. From inside Kubernetes this is usually
+  # http://aisphere-auth.aisphere-system.svc.cluster.local:18080
+  endpoint: "http://127.0.0.1:18080"
+
+  # Service token shared with aisphere-auth. Must match
+  # AISPHERE_SERVICE_TOKEN on the aisphere-auth side. Required for
+  # calling /authz/check and /auth/sessions/introspect.
+  serviceToken: "${AISPHERE_SERVICE_TOKEN}"
+
+  # Optional: override the service token header name. Defaults to
+  # X-Aisphere-Service-Token.
+  serviceTokenHeader: ""
+
+  # AI Sphere session cookie name. Default aisphere_session.
+  cookieName: "aisphere_session"
+
+  # App identifier for audit attribution. Should match the value
+  # passed to aisphere-auth's /auth/login?app=aihub.
+  app: "aihub"
+
+  # HTTP client timeout for introspect / check calls.
+  httpTimeoutSeconds: 10
+
+  # In-process introspect cache TTL. 0 disables caching. A short TTL
+  # (e.g. 5s) avoids hitting aisphere-auth on every request without
+  # noticeably increasing session revocation latency.
+  cacheTTLSeconds: 5
+
+  # When aisphere-auth is unreachable, deny rather than allow. AuthN
+  # always fails closed; this flag only affects AuthZ.
+  failClosed: true
+
+ops:
+  metricsEnabled: true
+  rateLimit:
+    enabled: true
+    writeLimitPerMinute: 120
+  idempotency:
+    enabled: true
+    ttlSeconds: 3600
+  # Audit writes local AIHub audit events and mirrors successful write operations
+  # to aisphere-auth /audit/events when aisphereAuth.enabled=true.
+  audit:
+    enabled: true
+
+web:
+  enabled: true
+  dir: "../front/out"
+  routePrefix: "/ui"
+  indexFallback: true

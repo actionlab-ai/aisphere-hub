@@ -1,0 +1,59 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: aihub-postgres
+    environment:
+      POSTGRES_USER: aisphere
+      POSTGRES_PASSWORD: CHANGE_ME_PASSWORD
+      POSTGRES_DB: postgres
+      TZ: Asia/Shanghai
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../../../../deployments/postgres/init-databases.sql:/docker-entrypoint-initdb.d/001-init-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aisphere -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    container_name: aihub-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+
+  minio:
+    image: minio/minio:latest
+    container_name: aihub-minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+
+  casdoor:
+    image: casbin/casdoor:latest
+    container_name: aihub-casdoor
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./casdoor/app.conf:/conf/app.conf:ro
+    environment:
+      RUNNING_IN_DOCKER: "true"
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:

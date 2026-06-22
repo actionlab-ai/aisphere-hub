@@ -1,0 +1,114 @@
+server:
+  addr: ":8848"
+  author: "admin"
+
+database:
+  provider: "postgres"
+  dsn: "${AIHUB_POSTGRES_DSN}"
+  autoCreate: true
+
+migration:
+  enabled: true
+  dir: "./migrations"
+
+cache:
+  provider: "redis"
+  redis:
+    mode: "single"
+    addrs: ["${SKILLHUB_REDIS_ADDR}"]
+    username: ""
+    password: "${SKILLHUB_REDIS_PASSWORD}"
+    db: 0
+    prefix: "aihub"
+
+objectStore:
+  provider: "s3"
+  prefix: ""
+  s3:
+    endpoint: "${SKILLHUB_S3_ENDPOINT}"
+    accessKey: "${SKILLHUB_S3_ACCESS_KEY}"
+    secretKey: "${SKILLHUB_S3_SECRET_KEY}"
+    bucket: "aihub"
+    useSSL: false
+    forcePathStyle: true
+    prefix: ""
+
+runtime:
+  routeCacheTTLSeconds: 300
+  versionCacheTTLSeconds: 600
+  groupCacheTTLSeconds: 60
+
+review:
+  enabled: false
+
+lock:
+  enabled: true
+  provider: "redis"
+  ttlSeconds: 30
+  waitSeconds: 2
+  useRedisConfig: true
+
+auth:
+  enabled: true
+  mode: "external"
+  allowAnonymous: false
+  allowPublicRead: true
+  local:
+    enabled: false
+
+  providers:
+    - name: "casdoor"
+      type: "oidc"
+      issuer: "${CASDOOR_ENDPOINT}"
+      audience: "${SKILLHUB_CASDOOR_CLIENT_ID}"
+      clientId: "${SKILLHUB_CASDOOR_CLIENT_ID}"
+      clientSecret: "${SKILLHUB_CASDOOR_CLIENT_SECRET}"
+      redirectUrl: "http://127.0.0.1:8848/v3/auth/oidc/callback"
+      scopes: ["openid", "profile", "email"]
+      claimMapping:
+        subject: "sub"
+        username: "preferred_username"
+        email: "email"
+        organization: "organization"
+        roles: "roles"
+        groups: "groups"
+
+  roleMappings:
+    - provider: "casdoor"
+      externalRole: "admin"
+      internalRoles: ["admin"]
+      permissions: ["*"]
+    - provider: "casdoor"
+      externalRole: "aihub-admin"
+      internalRoles: ["admin"]
+      permissions: ["*"]
+    - provider: "casdoor"
+      externalRole: "developer"
+      internalRoles: ["developer"]
+    - provider: "casdoor"
+      externalRole: "reviewer"
+      internalRoles: ["reviewer"]
+    - provider: "casdoor"
+      externalRole: "agent"
+      subjectType: "agent"
+      internalRoles: ["agent"]
+
+web:
+  enabled: true
+  dir: "../front/out"
+  routePrefix: "/ui"
+  indexFallback: true
+
+authz:
+  provider: "casdoor-remote"
+  casdoor:
+    endpoint: "${CASDOOR_ENDPOINT}"
+    owner: "built-in"
+    application: "aihub"
+    permission: "aihub_permission"
+    permissionId: ""
+    clientId: "${SKILLHUB_CASDOOR_CLIENT_ID}"
+    clientSecret: "${SKILLHUB_CASDOOR_CLIENT_SECRET}"
+    subjectFormat: "casdoor"
+    cacheTTLSeconds: 30
+    failClosed: true

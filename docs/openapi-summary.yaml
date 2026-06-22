@@ -1,0 +1,351 @@
+openapi: 3.0.3
+info:
+  title: SkillHub Go Edition API
+  version: governance-complete-api-spec-v1
+  description: |
+    Summary OpenAPI for SkillHub. See docs/API_SPEC.md for detailed request/response schemas.
+servers:
+  - url: http://127.0.0.1:8848
+security:
+  - bearerAuth: []
+  - apiKeyAuth: []
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      responses:
+        '200': { description: OK }
+  /v3/auth/setup/status:
+    get:
+      summary: Get local first setup status
+      responses:
+        '200': { description: OK }
+  /v3/auth/setup:
+    post:
+      summary: First setup local admin
+      responses:
+        '200': { description: OK }
+        '409': { description: Already initialized }
+  /v3/auth/login:
+    post:
+      summary: Local login
+      responses:
+        '200': { description: Token issued }
+  /v3/auth/refresh:
+    post:
+      summary: Refresh local token
+      responses:
+        '200': { description: Token refreshed }
+  /v3/auth/me:
+    get:
+      summary: Current principal
+      responses:
+        '200': { description: OK }
+  /v3/admin/iam/whoami:
+    get:
+      summary: Debug current principal
+      responses:
+        '200': { description: OK }
+  /v3/admin/iam/local-users/list:
+    get:
+      summary: List local users
+      responses:
+        '200': { description: OK }
+  /v3/admin/iam/local-users:
+    post:
+      summary: Create local user / agent / service account
+      responses:
+        '200': { description: OK }
+  /v3/admin/iam/local-users/{username}:
+    put:
+      summary: Update local user
+      parameters:
+        - in: path
+          name: username
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+    delete:
+      summary: Disable local user
+      parameters:
+        - in: path
+          name: username
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+  /v3/admin/iam/tokens:
+    get:
+      summary: List API tokens
+      responses:
+        '200': { description: OK }
+    post:
+      summary: Create API token
+      responses:
+        '200': { description: OK }
+  /v3/admin/iam/tokens/{keyId}:
+    delete:
+      summary: Delete API token
+      parameters:
+        - in: path
+          name: keyId
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+  /v3/admin/namespaces:
+    get:
+      summary: List namespaces
+      responses:
+        '200': { description: OK }
+    post:
+      summary: Create namespace
+      responses:
+        '200': { description: OK }
+  /v3/admin/namespaces/{namespaceId}:
+    get:
+      summary: Get namespace
+      parameters:
+        - in: path
+          name: namespaceId
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+    put:
+      summary: Update namespace
+      parameters:
+        - in: path
+          name: namespaceId
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+  /v3/admin/namespaces/{namespaceId}/members:
+    get:
+      summary: List namespace members
+      parameters:
+        - in: path
+          name: namespaceId
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+    post:
+      summary: Add namespace member
+      parameters:
+        - in: path
+          name: namespaceId
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+  /v3/admin/namespaces/{namespaceId}/members/{subjectId}:
+    put:
+      summary: Update namespace member
+      parameters:
+        - in: path
+          name: namespaceId
+          required: true
+          schema: { type: string }
+        - in: path
+          name: subjectId
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+    delete:
+      summary: Remove namespace member
+      parameters:
+        - in: path
+          name: namespaceId
+          required: true
+          schema: { type: string }
+        - in: path
+          name: subjectId
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+  /v3/admin/ai/skills/list:
+    get:
+      summary: List skills
+      responses:
+        '200': { description: OK }
+  /v3/admin/ai/skills:
+    get:
+      summary: Get skill
+      responses:
+        '200': { description: OK }
+    delete:
+      summary: Delete skill
+      responses:
+        '200': { description: OK }
+  /v3/admin/ai/skills/upload:
+    post:
+      summary: Upload skill zip
+      responses:
+        '200': { description: OK }
+  /v3/admin/ai/skills/upload/batch:
+    post:
+      summary: Batch upload skill zip
+      responses:
+        '200': { description: OK }
+  /v3/admin/ai/skills/version:
+    get:
+      summary: Get skill version
+      responses:
+        '200': { description: OK }
+  /v3/admin/ai/skills/version/files:
+    get:
+      summary: List skill version files
+      responses:
+        '200': { description: OK }
+  /v3/admin/ai/skills/version/file:
+    get:
+      summary: Get skill version file content
+      responses:
+        '200': { description: OK }
+  /v3/admin/ai/skills/version/compare:
+    get:
+      summary: Compare two skill versions
+      responses:
+        '200': { description: OK }
+  /v3/admin/ai/skills/version/download:
+    get:
+      summary: Download skill version zip
+      responses:
+        '200': { description: ZIP }
+  /v3/admin/ai/skills/draft:
+    post: { summary: Create draft, responses: { '200': { description: OK } } }
+    put: { summary: Update draft, responses: { '200': { description: OK } } }
+    delete: { summary: Delete draft, responses: { '200': { description: OK } } }
+  /v3/admin/ai/skills/submit:
+    post: { summary: Submit skill version, responses: { '200': { description: OK } } }
+  /v3/admin/ai/skills/publish:
+    post: { summary: Publish skill version, responses: { '200': { description: OK } } }
+  /v3/admin/ai/skills/force-publish:
+    post: { summary: Force publish skill version, responses: { '200': { description: OK } } }
+  /v3/admin/ai/skills/redraft:
+    post: { summary: Redraft skill version, responses: { '200': { description: OK } } }
+  /v3/admin/ai/skills/labels:
+    put: { summary: Update skill labels, responses: { '200': { description: OK } } }
+  /v3/admin/ai/skills/biz-tags:
+    put: { summary: Update skill biz tags, responses: { '200': { description: OK } } }
+  /v3/admin/ai/skills/metadata:
+    put: { summary: Update skill metadata, responses: { '200': { description: OK } } }
+  /v3/admin/ai/skills/scope:
+    put: { summary: Update skill scope, responses: { '200': { description: OK } } }
+  /v3/admin/ai/skills/online:
+    post: { summary: Online skill, responses: { '200': { description: OK } } }
+  /v3/admin/ai/skills/offline:
+    post: { summary: Offline skill, responses: { '200': { description: OK } } }
+  /v3/admin/ai/skills/social:
+    get: { summary: Get skill social state, responses: { '200': { description: OK } } }
+  /v3/admin/ai/skills/social/star:
+    post: { summary: Star/unstar skill, responses: { '200': { description: OK } } }
+  /v3/admin/ai/skills/social/rating:
+    post: { summary: Rate skill, responses: { '200': { description: OK } } }
+  /v3/admin/ai/skills/social/subscribe:
+    post: { summary: Subscribe/unsubscribe skill, responses: { '200': { description: OK } } }
+  /v3/admin/ai/skill-groups/list:
+    get: { summary: List skill groups, responses: { '200': { description: OK } } }
+  /v3/admin/ai/skill-groups:
+    get: { summary: Get skill group, responses: { '200': { description: OK } } }
+    post: { summary: Create skill group, responses: { '200': { description: OK } } }
+    put: { summary: Update skill group, responses: { '200': { description: OK } } }
+    delete: { summary: Delete skill group, responses: { '200': { description: OK } } }
+  /v3/admin/ai/skill-groups/bind:
+    post: { summary: Bind skill to group, responses: { '200': { description: OK } } }
+    delete: { summary: Unbind skill from group, responses: { '200': { description: OK } } }
+  /v3/agent/ai/skill-proposals:
+    post: { summary: Submit skill proposal, responses: { '200': { description: OK } } }
+  /v3/agent/ai/skill-proposals/{proposalId}:
+    get:
+      summary: Get agent proposal
+      parameters:
+        - in: path
+          name: proposalId
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+  /v3/agent/ai/skill-overlays/{proposalId}:
+    get:
+      summary: Get overlay by proposal id
+      parameters:
+        - in: path
+          name: proposalId
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+  /v3/agent/ai/skill-overlays:
+    get: { summary: Get overlay by overlayRef, responses: { '200': { description: OK } } }
+  /v3/admin/ai/skill-proposals/list:
+    get: { summary: Governance inbox list, responses: { '200': { description: OK } } }
+  /v3/admin/ai/skill-proposals/{proposalId}:
+    get:
+      summary: Get proposal detail
+      parameters:
+        - in: path
+          name: proposalId
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+  /v3/admin/ai/skill-proposals/{proposalId}/validate:
+    post:
+      summary: Validate proposal
+      parameters:
+        - in: path
+          name: proposalId
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+  /v3/admin/ai/skill-proposals/{proposalId}/approve:
+    post:
+      summary: Approve proposal
+      parameters:
+        - in: path
+          name: proposalId
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+  /v3/admin/ai/skill-proposals/{proposalId}/reject:
+    post:
+      summary: Reject proposal
+      parameters:
+        - in: path
+          name: proposalId
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+  /v3/client/ai/skills:
+    get: { summary: Runtime download skill zip, responses: { '200': { description: ZIP }, '304': { description: Not modified } } }
+  /v3/client/ai/skill-groups:
+    get: { summary: Runtime get skill group manifest, responses: { '200': { description: OK } } }
+  /registry/{namespaceId}/api/search:
+    get: { summary: Registry search, responses: { '200': { description: OK } } }
+  /registry/{namespaceId}/.well-known/agent-skills/{path}:
+    get: { summary: Agent skills well-known index/zip/files, responses: { '200': { description: OK } } }
+  /v3/admin/audit/logs:
+    get: { summary: List audit logs, responses: { '200': { description: OK } } }
+  /metrics:
+    get: { summary: Prometheus metrics, responses: { '200': { description: OK } } }
+  /v3/admin/metrics:
+    get: { summary: JSON metrics, responses: { '200': { description: OK } } }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key

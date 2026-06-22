@@ -1,0 +1,73 @@
+server:
+  addr: ":8848"
+  author: "dev"
+
+database:
+  provider: "local"
+  local:
+    root: "./data/aihub"
+
+migration:
+  enabled: false
+  dir: "./migrations"
+
+cache:
+  provider: "memory"
+
+objectStore:
+  provider: "local"
+  local:
+    root: "./data/objects"
+
+runtime:
+  routeCacheTTLSeconds: 300
+  versionCacheTTLSeconds: 600
+  groupCacheTTLSeconds: 60
+
+lock:
+  enabled: true
+  provider: "memory"
+  ttlSeconds: 30
+  waitSeconds: 2
+
+auth:
+  enabled: true
+  mode: "local" # local / external / mixed
+  allowAnonymous: false
+  allowPublicRead: true
+  local:
+    enabled: true
+    issuer: "aihub-local-dev"
+    signingSecret: "dev_local_signing_secret_change_me_before_prod"
+    accessTokenTTLSeconds: 3600
+    refreshTokenTTLSeconds: 604800
+    accountFile: "./data/iam/local_accounts.json"
+    autoCreateBootstrap: true
+    setupEnabled: true
+    setupToken: ""
+    users:
+      - username: "admin"
+        password: "dev-only-change-me"
+        subjectId: "user:admin"
+        subjectType: "human"
+        displayName: "Local Admin"
+        organization: "default"
+        roles: ["admin"]
+        permissions: ["*"]
+        namespaces: ["*"]
+      - username: "dialogue-agent"
+        password: "dev-only-change-me"
+        subjectId: "agent:dialogue_skill_batch_worker"
+        subjectType: "agent"
+        organization: "default"
+        roles: ["agent"]
+        permissions: ["skill:read", "skill:proposal:create", "skill:proposal:read", "skill:overlay:read"]
+        namespaces: ["public", "dev"]
+
+
+# Standalone AIHub Console. Build front and serve dist under /ui.
+web:
+  enabled: true
+  dir: "../front/out"
+  routePrefix: "/ui"
+  indexFallback: true

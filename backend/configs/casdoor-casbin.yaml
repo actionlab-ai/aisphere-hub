@@ -1,0 +1,132 @@
+server:
+  addr: ":8848"
+  author: "aihub"
+
+database:
+  provider: "postgres"
+  dsn: "${AIHUB_POSTGRES_DSN}"
+  autoCreate: true
+  local:
+    root: "./data/aihub"
+
+migration:
+  enabled: true
+  dir: "./migrations"
+
+cache:
+  provider: "redis"
+  redis:
+    mode: "single"
+    addrs: ["127.0.0.1:6379"]
+    username: ""
+    password: ""
+    db: 0
+    prefix: "aihub"
+
+objectStore:
+  provider: "minio"
+  prefix: ""
+  local:
+    root: "./data/objects"
+  s3:
+    endpoint: "127.0.0.1:9000"
+    region: "us-east-1"
+    accessKey: "minioadmin"
+    secretKey: "minioadmin"
+    bucket: "aihub"
+    useSSL: false
+    forcePathStyle: true
+    prefix: ""
+
+runtime:
+  routeCacheTTLSeconds: 300
+  versionCacheTTLSeconds: 600
+  groupCacheTTLSeconds: 60
+
+review:
+  enabled: false
+
+lock:
+  enabled: true
+  provider: "redis"
+  ttlSeconds: 30
+  waitSeconds: 2
+  useRedisConfig: true
+
+# Authentication: Casdoor is deployed as an external service.
+# AIHub only validates OIDC/JWT tokens and maps claims to Principal.
+auth:
+  enabled: true
+  mode: "external" # external recommended with Casdoor; mixed can keep local fallback
+  allowAnonymous: false
+  allowPublicRead: true
+  local:
+    enabled: false
+
+  providers:
+    - name: "casdoor"
+      type: "oidc"
+      # Casdoor issuer must match its OIDC discovery issuer.
+      # Casdoor issuer must match its OIDC discovery issuer.
+      issuer: "${CASDOOR_ENDPOINT}"
+      audience: "aihub"
+      clientId: "aihub"
+      clientSecret: "${SKILLHUB_CASDOOR_CLIENT_SECRET}"
+      redirectUrl: "http://127.0.0.1:8848/v3/auth/oidc/callback" # must be added to Casdoor Application Redirect URIs
+      scopes: ["openid", "profile", "email"]
+      claimMapping:
+        subject: "sub"
+        username: "preferred_username"
+        email: "email"
+        organization: "organization"
+        roles: "roles"
+        groups: "groups"
+
+  # External Casdoor roles/groups -> AIHub internal roles.
+  roleMappings:
+    - provider: "casdoor"
+      externalRole: "admin"
+      internalRoles: ["admin"]
+      permissions: ["*"]
+    - provider: "casdoor"
+      externalRole: "developer"
+      internalRoles: ["developer"]
+    - provider: "casdoor"
+      externalRole: "reviewer"
+      internalRoles: ["reviewer"]
+    - provider: "casdoor"
+      externalRole: "agent"
+      subjectType: "agent"
+      internalRoles: ["agent"]
+
+# Authorization: Casbin is imported as a Go library and embedded in AIHub.
+# For production use mysql policyStore. It persists p/g rules in aihub_casbin_rule.
+authz:
+  provider: "casdoor-remote"
+  casdoor:
+    endpoint: "${CASDOOR_ENDPOINT}"
+    owner: "built-in"
+    application: "aihub"
+    permission: "aihub_permission"
+    permissionId: ""
+    clientId: "${SKILLHUB_CASDOOR_CLIENT_ID}"
+    clientSecret: "${SKILLHUB_CASDOOR_CLIENT_SECRET}"
+    subjectFormat: "casdoor"
+    cacheTTLSeconds: 30
+    failClosed: true
+ops:
+  metricsEnabled: true
+  rateLimit:
+    enabled: true
+    writeLimitPerMinute: 120
+  idempotency:
+    enabled: true
+    ttlSeconds: 3600
+  audit:
+    enabled: true
+
+web:
+  enabled: true
+  dir: "../front/out"
+  routePrefix: "/ui"
+  indexFallback: true

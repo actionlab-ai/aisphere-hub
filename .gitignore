@@ -1,0 +1,53 @@
+# Go
+bin/
+dist/
+tmp/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.prof
+coverage.out
+coverage.html
+
+# Node
+node_modules/
+.next/
+out/
+dist/
+front/dist/
+backend/config/
+backend/config.yaml
+.env
+.env.*
+!.env.example
+!front/.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local data
+data/
+backups/
+
+# Build
+front/.next/
+front/out/
+front/node_modules/
+front/next-env.d.ts
+front/tsconfig.tsbuildinfo
+backend/skillhub
+
+# Runtime scripts shipped in the sandbox image.
+!deployments/sandbox/image/bin/
+!deployments/sandbox/image/bin/**

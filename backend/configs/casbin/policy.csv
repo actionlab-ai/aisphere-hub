@@ -1,0 +1,43 @@
+# Bootstrap policies. In production set authz.policyStore=mysql and manage these through DB/ops.
+# Casdoor supplies subject/roles. AIHub maps role "admin" to "role:admin" at authorization time.
+
+# Full administrator.
+p, role:admin, *, *, allow
+
+# Skill developer.
+p, role:developer, aihub:skill:*, skill:read, allow
+p, role:developer, aihub:skill:*, skill:update, allow
+p, role:developer, aihub:skill:*, skill:admin:read, allow
+p, role:developer, aihub:skill:*, skill:admin:write, allow
+p, role:developer, aihub:skillset:*, group:read, allow
+p, role:developer, aihub:skillset:*, skill:group:read, allow
+p, role:developer, aihub:skillset:*, skill:group:write, allow
+
+# Governance reviewer.
+p, role:reviewer, aihub:proposal:*, proposal:read, allow
+p, role:reviewer, aihub:proposal:*, proposal:validate, allow
+p, role:reviewer, aihub:proposal:*, proposal:approve, allow
+p, role:reviewer, aihub:proposal:*, proposal:reject, allow
+p, role:reviewer, aihub:proposal:*, skill:proposal:review, allow
+
+# Agent / service runtime.
+p, role:agent, aihub:skill:*, skill:read, allow
+p, role:agent, aihub:skillset:*, skill:read, allow
+p, role:agent, aihub:proposal:*, proposal:create, allow
+p, role:agent, aihub:proposal:*, skill:proposal:create, allow
+p, role:agent, aihub:proposal:*, skill:proposal:read, allow
+p, role:agent, overlay:*, overlay:read, allow
+p, role:agent, overlay:*, skill:overlay:read, allow
+
+# Local bootstrap examples.
+g, user:admin, role:admin
+g, service:aihub-emergency, role:admin
+
+# Access admin platform. Only role:admin can manage policies and role mappings.
+p, role:admin, access:*, access:admin:read, allow
+p, role:admin, access:*, access:admin:write, allow
+p, role:admin, notification:*, notification:read, allow
+p, role:admin, metrics:*, metrics:read, allow
+p, role:viewer, aihub:skill:*, skill:admin:read, allow
+p, role:viewer, aihub:skillset:*, skill:group:read, allow
+p, role:viewer, notification:*, notification:read, allow

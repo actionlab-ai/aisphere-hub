@@ -1,0 +1,198 @@
+server:
+  addr: ":8848"
+  author: "admin"
+
+# database.provider:
+#   local: 本地 JSON 文件，适合开发 / demo
+#   postgres: 统一主库，生产推荐，启动时自动检查 schema
+# Skill registry is namespace-free. Access Spaces below are IAM/RBAC domains only, not skill grouping dimensions.
+database:
+  provider: "postgres"
+  # DSN 里带库名即可；PostgreSQL DSN 里带库名即可；生产推荐使用外部 migration/job 初始化数据库。
+  dsn: "${AIHUB_POSTGRES_DSN}"
+  autoCreate: true
+
+# 启动时自动建库、建表、记录 migration，不需要用户手工导入 SQL。
+migration:
+  enabled: true
+  dir: "./migrations"
+
+# cache.provider:
+#   memory: 单进程开发
+#   redis: 生产推荐，支持 single / cluster
+#   noop: 禁用缓存
+cache:
+  provider: "redis"
+  redis:
+    mode: "single" # single / cluster
+    addrs: ["${SKILLHUB_REDIS_ADDR}"]
+    username: ""
+    password: "${SKILLHUB_REDIS_PASSWORD}"
+    db: 0
+    prefix: "aihub"
+
+# Redis Cluster 示例：
+# cache:
+#   provider: "redis"
+#   redis:
+#     mode: "cluster"
+#     addrs:
+#       - "10.0.0.1:6379"
+#       - "10.0.0.2:6379"
+#       - "10.0.0.3:6379"
+#     prefix: "aihub"
+
+# objectStore.provider:
+#   local: 本地文件，适合开发
+#   minio/s3: 生产推荐
+#   none: 不启用对象存储，运行时会从 DB 里的 skill JSON fallback 重新打包
+objectStore:
+  provider: "s3"
+  prefix: ""
+  s3:
+    endpoint: "${SKILLHUB_S3_ENDPOINT}"
+    accessKey: "minioadmin"
+    secretKey: "${SKILLHUB_S3_SECRET_KEY}"
+    bucket: "aihub"
+    useSSL: false
+    forcePathStyle: true
+    prefix: ""
+
+runtime:
+  routeCacheTTLSeconds: 300
+  versionCacheTTLSeconds: 600
+  groupCacheTTLSeconds: 60
+
+review:
+  enabled: false
+
+lock:
+  enabled: true
+  provider: "redis"
+  ttlSeconds: 30
+  waitSeconds: 2
+  useRedisConfig: true
+
+auth:
+  enabled: true
+  mode: "mixed" # external recommended with Casdoor; mixed can keep local fallback
+  allowAnonymous: false
+  allowPublicRead: true
+  local:
+    enabled: false
+
+  providers:
+    - name: "casdoor"
+      type: "oidc"
+      # Casdoor issuer must match its OIDC discovery issuer.
+      # Casdoor issuer must match its OIDC discovery issuer.
+      issuer: "${CASDOOR_ENDPOINT}"
+      audience: "${SKILLHUB_CASDOOR_CLIENT_ID}"
+      clientId: "${SKILLHUB_CASDOOR_CLIENT_ID}"
+      clientSecret: "${SKILLHUB_CASDOOR_CLIENT_SECRET}"
+      redirectUrl: "http://127.0.0.1:8848/v3/auth/oidc/callback" # must be added to Casdoor Application Redirect URIs
+      scopes: ["openid", "profile", "email"]
+      claimMapping:
+        subject: "sub"
+        username: "preferred_username"
+        email: "email"
+        organization: "organization"
+        roles: "roles"
+        groups: "groups"
+
+  roleMappings:
+    - provider: "casdoor"
+      externalRole: "admin"
+      internalRoles: ["admin"]
+      permissions: ["*"]
+    - provider: "casdoor"
+      externalRole: "developer"
+      internalRoles: ["developer"]
+    - provider: "casdoor"
+      externalRole: "reviewer"
+      internalRoles: ["reviewer"]
+    - provider: "casdoor"
+      externalRole: "skill-admin"
+      internalRoles: ["admin"]
+      permissions: ["*"]
+
+
+# Standalone AIHub Console. Build front and serve dist under /ui.
+web:
+  enabled: true
+  dir: "../front/out"
+  routePrefix: "/ui"
+  indexFallback: true
+
+# AIHub resource authorization.
+# Production recommendation: Casdoor is the internal IAM + Casbin permission center.
+# AIHub no longer edits policies locally; it calls Casdoor /api/enforce for every protected resource action.
+authz:
+  provider: "casdoor-remote" # casdoor-remote / casbin / static
+  casdoor:
+    endpoint: "${CASDOOR_ENDPOINT}"
+    owner: "aisphere" # change to your Casdoor organization, e.g. aisphere
+    application: "application_f21qn9"
+    permission: "aihub_permission"
+    # permissionId can override owner/permission, e.g. "built-in/aihub_permission"
+    permissionId: ""
+    # model/modelId are optional. Prefer permissionId for one AIHub permission set.
+    model: ""
+    modelId: ""
+    clientId: "${SKILLHUB_CASDOOR_CLIENT_ID}"
+    clientSecret: "${SKILLHUB_CASDOOR_CLIENT_SECRET}"
+    subjectFormat: "casdoor" # casdoor -> org/username; principal -> human:uuid; external -> raw sub
+    cacheTTLSeconds: 30
+    failClosed: true
+
+# AI Sphere platform auth integration. Enable this when AIHub is deployed
+# as a sub-application behind aisphere-auth.
+aisphereAuth:
+  enabled: false
+  endpoint: "${AISPHERE_AUTH_ENDPOINT}"
+  serviceToken: "${AISPHERE_SERVICE_TOKEN}"
+  serviceTokenHeader: ""
+  cookieName: "aisphere_session"
+  app: "aihub"
+  httpTimeoutSeconds: 10
+  cacheTTLSeconds: 5
+  failClosed: true
+
+ops:
+  metricsEnabled: true
+  rateLimit:
+    enabled: true
+    writeLimitPerMinute: 120
+  idempotency:
+    enabled: true
+    ttlSeconds: 3600
+  audit:
+    enabled: true
+
+# AgentKit session sandbox execution plane.
+# The sandbox image contains built-in file/search/browser tools; /workspace is a PVC.
+sandbox:
+  enabled: true
+  driver: "kubernetes"
+  kubernetes:
+    namespace: "aisphere-sandbox"
+    createNamespace: true
+    serviceAccount: "agentkit-sandbox-controller"
+    runtimeClassName: ""
+    # Requires CNI NetworkPolicy support. offline=deny egress, restricted=DNS + egress CIDRs, online=no per-pod deny policy.
+    networkPolicyEnabled: true
+  image: "registry.local/aisphere/agentkit-sandbox:latest"
+  imagePullPolicy: "IfNotPresent"
+  workspaceMountPath: "/workspace"
+  storageClass: "nfs-client"
+  workspaceSize: "10Gi"
+  defaultNetworkMode: "offline" # offline / restricted / online
+  defaultEgressCidrs: []
+  toolPort: 18081
+  browserPort: 9222
+  vncOrWebPort: 6080
+  defaultCpu: "500m"
+  defaultMemory: "1Gi"
+  maxCpu: "2"
+  maxMemory: "4Gi"
+  idleTtlSeconds: 3600

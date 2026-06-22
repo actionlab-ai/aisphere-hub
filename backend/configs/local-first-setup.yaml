@@ -1,0 +1,59 @@
+server:
+  addr: ":8848"
+  author: "dev"
+
+database:
+  provider: "local"
+  local:
+    root: "./data/aihub"
+
+migration:
+  enabled: false
+
+cache:
+  provider: "memory"
+
+objectStore:
+  provider: "local"
+  local:
+    root: "./data/objects"
+
+lock:
+  enabled: true
+  provider: "memory"
+
+auth:
+  enabled: true
+  mode: "local"
+  allowAnonymous: false
+  allowPublicRead: true
+  local:
+    enabled: true
+    issuer: "aihub-local-dev"
+    signingSecret: "dev-only-local-signing-secret-please-change-in-production-20260616"
+    accessTokenTTLSeconds: 3600
+    refreshTokenTTLSeconds: 604800
+    accountFile: "./data/iam/local_accounts.json"
+    autoCreateBootstrap: false
+    setupEnabled: true
+    setupToken: ""
+    users: []
+
+
+# Standalone AIHub Console. Build front and serve dist under /ui.
+web:
+  enabled: true
+  dir: "../front/out"
+  routePrefix: "/ui"
+  indexFallback: true
+
+ops:
+  metricsEnabled: true
+  rateLimit:
+    enabled: true
+    writeLimitPerMinute: 120
+  idempotency:
+    enabled: true
+    ttlSeconds: 3600
+  audit:
+    enabled: true

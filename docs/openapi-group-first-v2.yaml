@@ -1,0 +1,118 @@
+openapi: 3.0.3
+info:
+  title: SkillHub Group-First API
+  version: v2
+  description: Namespace-free skill registry. Groups organize skills; Access Spaces handle IAM/RBAC only.
+paths:
+  /v3/aihub/skills:
+    get:
+      summary: List skills
+      parameters:
+        - in: query
+          name: groupName
+          schema: {type: string}
+        - in: query
+          name: search
+          schema: {type: string}
+      responses:
+        '200': {description: OK}
+  /v3/aihub/skills/upload:
+    post:
+      summary: Upload skill zip
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: {type: string, format: binary}
+                overwrite: {type: boolean}
+                targetVersion: {type: string}
+                commitMsg: {type: string}
+      responses:
+        '200': {description: OK}
+  /v3/aihub/skill/{skillName}:
+    get:
+      summary: Get skill detail
+      parameters:
+        - in: path
+          name: skillName
+          required: true
+          schema: {type: string}
+      responses:
+        '200': {description: OK}
+    delete:
+      summary: Delete skill
+      parameters:
+        - in: path
+          name: skillName
+          required: true
+          schema: {type: string}
+      responses:
+        '200': {description: OK}
+  /v3/aihub/skill/{skillName}/versions/{version}:
+    get:
+      summary: Get skill version
+      parameters:
+        - in: path
+          name: skillName
+          required: true
+          schema: {type: string}
+        - in: path
+          name: version
+          required: true
+          schema: {type: string}
+      responses:
+        '200': {description: OK}
+  /v3/aihub/groups:
+    get:
+      summary: List groups
+      responses: {'200': {description: OK}}
+    post:
+      summary: Create or update group
+      responses: {'200': {description: OK}}
+  /v3/aihub/group/{groupName}:
+    get:
+      summary: Get group
+      parameters:
+        - in: path
+          name: groupName
+          required: true
+          schema: {type: string}
+      responses: {'200': {description: OK}}
+  /v3/client/ai/skills/{skillName}:
+    get:
+      summary: Runtime download skill zip
+      parameters:
+        - in: path
+          name: skillName
+          required: true
+          schema: {type: string}
+        - in: query
+          name: label
+          schema: {type: string}
+        - in: query
+          name: version
+          schema: {type: string}
+        - in: query
+          name: md5
+          schema: {type: string}
+      responses:
+        '200': {description: ZIP}
+        '304': {description: Not modified}
+  /v3/client/ai/groups/{groupName}:
+    get:
+      summary: Runtime resolve group manifest
+      parameters:
+        - in: path
+          name: groupName
+          required: true
+          schema: {type: string}
+        - in: query
+          name: label
+          schema: {type: string}
+      responses: {'200': {description: OK}}
+  /registry-global/.well-known/agent-skills/index.json:
+    get:
+      summary: Registry index
+      responses: {'200': {description: OK}}

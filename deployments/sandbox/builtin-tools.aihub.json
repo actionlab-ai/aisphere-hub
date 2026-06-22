@@ -1,0 +1,107 @@
+[
+  {
+    "id": "workspace.list",
+    "displayName": "Workspace List",
+    "description": "List files and directories inside the sandbox /workspace PVC.",
+    "status": "enable",
+    "scope": "public",
+    "version": "1.0.0",
+    "labels": {"stable": "1.0.0", "latest": "1.0.0"},
+    "definition": {
+      "runtime": {"type": "builtin", "name": "workspace.list", "description": "List workspace files."},
+      "execution": {"placement": "sandbox", "runner": "builtin", "filesystem": "readonly", "network": "none", "capabilities": ["filesystem.read"]},
+      "inputSchema": {"type":"object","properties":{"path":{"type":"string"},"recursive":{"type":"boolean"},"maxEntries":{"type":"integer"}}},
+      "timeoutMillis": 10000
+    }
+  },
+  {
+    "id": "workspace.read",
+    "displayName": "Workspace Read",
+    "description": "Read a text file inside sandbox /workspace.",
+    "status": "enable",
+    "scope": "public",
+    "version": "1.0.0",
+    "labels": {"stable": "1.0.0", "latest": "1.0.0"},
+    "definition": {
+      "runtime": {"type": "builtin", "name": "workspace.read", "description": "Read workspace file."},
+      "execution": {"placement": "sandbox", "runner": "builtin", "filesystem": "readonly", "network": "none", "capabilities": ["filesystem.read"]},
+      "inputSchema": {"type":"object","required":["path"],"properties":{"path":{"type":"string"},"offset":{"type":"integer"},"limit":{"type":"integer"}}},
+      "timeoutMillis": 10000
+    }
+  },
+  {
+    "id": "workspace.write",
+    "displayName": "Workspace Write",
+    "description": "Write or append text under sandbox /workspace.",
+    "status": "enable",
+    "scope": "public",
+    "version": "1.0.0",
+    "labels": {"stable": "1.0.0", "latest": "1.0.0"},
+    "definition": {
+      "runtime": {"type": "builtin", "name": "workspace.write", "description": "Write workspace file."},
+      "execution": {"placement": "sandbox", "runner": "builtin", "filesystem": "workspace", "network": "none", "capabilities": ["filesystem.write"]},
+      "inputSchema": {"type":"object","required":["path","content"],"properties":{"path":{"type":"string"},"content":{"type":"string"},"append":{"type":"boolean"}}},
+      "timeoutMillis": 10000
+    }
+  },
+  {
+    "id": "workspace.patch",
+    "displayName": "Workspace Patch",
+    "description": "Patch text files inside sandbox /workspace by exact replacement.",
+    "status": "enable",
+    "scope": "public",
+    "version": "1.0.0",
+    "labels": {"stable": "1.0.0", "latest": "1.0.0"},
+    "definition": {
+      "runtime": {"type": "builtin", "name": "workspace.patch", "description": "Patch workspace file."},
+      "execution": {"placement": "sandbox", "runner": "builtin", "filesystem": "workspace", "network": "none", "capabilities": ["filesystem.read", "filesystem.write"]},
+      "inputSchema": {"type":"object","required":["path","old","new"],"properties":{"path":{"type":"string"},"old":{"type":"string"},"new":{"type":"string"},"count":{"type":"integer"}}},
+      "timeoutMillis": 10000
+    }
+  },
+  {
+    "id": "workspace.search_files",
+    "displayName": "Workspace Search Files",
+    "description": "Search paths and file names inside sandbox /workspace.",
+    "status": "enable",
+    "scope": "public",
+    "version": "1.0.0",
+    "labels": {"stable": "1.0.0", "latest": "1.0.0"},
+    "definition": {
+      "runtime": {"type": "builtin", "name": "workspace.search_files", "description": "Search workspace paths."},
+      "execution": {"placement": "sandbox", "runner": "builtin", "filesystem": "readonly", "network": "none", "capabilities": ["filesystem.read"]},
+      "inputSchema": {"type":"object","properties":{"path":{"type":"string"},"query":{"type":"string"},"glob":{"type":"string"},"maxResults":{"type":"integer"}}},
+      "timeoutMillis": 15000
+    }
+  },
+  {
+    "id": "workspace.search_text",
+    "displayName": "Workspace Search Text",
+    "description": "Search file contents inside sandbox /workspace.",
+    "status": "enable",
+    "scope": "public",
+    "version": "1.0.0",
+    "labels": {"stable": "1.0.0", "latest": "1.0.0"},
+    "definition": {
+      "runtime": {"type": "builtin", "name": "workspace.search_text", "description": "Search workspace text."},
+      "execution": {"placement": "sandbox", "runner": "builtin", "filesystem": "readonly", "network": "none", "capabilities": ["filesystem.read"]},
+      "inputSchema": {"type":"object","required":["query"],"properties":{"path":{"type":"string"},"query":{"type":"string"},"glob":{"type":"string"},"maxResults":{"type":"integer"}}},
+      "timeoutMillis": 15000
+    }
+  },
+  {
+    "id": "browser.open",
+    "displayName": "Sandbox Browser Open",
+    "description": "Open a URL in the sandbox headless browser. Requires network policy to allow destination.",
+    "status": "enable",
+    "scope": "public",
+    "version": "1.0.0",
+    "labels": {"stable": "1.0.0", "latest": "1.0.0"},
+    "definition": {
+      "runtime": {"type": "builtin", "name": "browser.open", "description": "Open URL in sandbox browser."},
+      "execution": {"placement": "sandbox", "runner": "builtin", "filesystem": "none", "network": "restricted", "capabilities": ["browser.open", "network.egress"]},
+      "inputSchema": {"type":"object","required":["url"],"properties":{"url":{"type":"string"}}},
+      "timeoutMillis": 20000
+    }
+  }
+]
